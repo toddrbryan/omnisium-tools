@@ -136,7 +136,8 @@ export async function upgradeDir({
       if (isUpgraded) ++upgradedCount
 
       result.push({ subdir, isUpgraded })
-    } catch (e) {
+    } catch (err) {
+      const e = err as Error
       if (verbose) console.log(`Error during ${subdir}: ${e.message}`)
       result.push({ subdir, error: e.message || 'Unknown error' })
     }

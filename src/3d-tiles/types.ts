@@ -1,3 +1,4 @@
+import { Copc } from 'copc'
 import { Bounds, View } from 'ept'
 import { Reproject } from 'utils'
 
@@ -13,6 +14,7 @@ export type Options = {
 
 export type Params = {
   view: View.Readable
+  copcView?: any
   tileBounds: Bounds
   toEcef: Reproject
   options: Partial<Options>

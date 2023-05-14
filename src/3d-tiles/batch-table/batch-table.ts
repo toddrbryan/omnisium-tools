@@ -1,8 +1,11 @@
 import { Options } from '3d-tiles/types'
 import { Dimension, Schema, View } from 'ept'
 import { EptToolsError } from 'types'
+import { View as CopcView, Bounds as CopcBounds } from 'copc'
 
 import { Header } from './header'
+import { Reproject } from 'utils'
+import { CopcNode } from '3d-tiles/tileset/types'
 
 // Work around TS namespaced re-export deficiency.
 type _Header = Header
@@ -10,7 +13,7 @@ export declare namespace BatchTable {
   export type Header = _Header
 }
 export type BatchTable = { header: Header; binary: Buffer }
-export const BatchTable = { create }
+export const BatchTable = { create, createFromCopc }
 
 const specials = [
   'ReturnNumber',
@@ -39,7 +42,7 @@ function create(
       const get = srcView.getter(name)
 
       let dimension = Schema.find(srcView.schema, name)
-      if (!dimension && get && specials.includes(name)) {
+      if (!dimension && specials.includes(name)) {
         dimension = { name, type: 'unsigned', size: 1 }
       }
       if (!dimension) throw new EptToolsError(`Invalid dimension: ${name}`)
@@ -73,6 +76,72 @@ function create(
 
       buffers.push(buffer)
     })
+
+  const binary = Buffer.concat(buffers)
+  return { header, binary }
+}
+
+interface ICreateFromCopcArgs {
+  node: CopcNode
+  copcView: CopcView
+  tileBounds: CopcBounds
+  toEcef: Reproject
+  options: {}
+}
+function createFromCopc({
+  node,
+  copcView,
+  tileBounds,
+  toEcef,
+  options,
+}: ICreateFromCopcArgs): BatchTable {
+  const length = copcView.pointCount
+
+  const header: Header = {}
+  const buffers: Buffer[] = []
+
+  Object.keys(copcView.dimensions).forEach((name) => {
+    const get = copcView.getter(name)
+
+    let dimension = {
+      name,
+      type: copcView.dimensions[name]!.type,
+      size: copcView.dimensions[name]!.size,
+    }
+    // if (!dimension && specials.includes(name)) {
+    //   dimension = { name, type: 'unsigned', size: 1 }
+    // }
+    // if (!dimension) throw new EptToolsError(`Invalid dimension: ${name}`)
+    const outputDimension = getOutputDimension(dimension)
+
+    // Each binary buffer must be padded such that the subsequent buffer meets
+    // its alignment requirement.  To make this trivial, just pad everything
+    // out to a multiple of 8 bytes.  Note that our ascending byteOffset needs
+    // to account for this, so we'll just perform this padding up front.  Also
+    // note that since we're not using our padding utility which zero-fills
+    // properly, we need to make sure to zero out the pad bytes here: so we're
+    // using Buffer.alloc instead of Buffer.allocUnsafe.
+    const byteLength = length * outputDimension.size
+    const rem = byteLength % 8
+    const pad = rem ? 8 - rem : 0
+    const buffer = Buffer.alloc(length * outputDimension.size + pad)
+
+    const dstView = View.Writable.create(buffer, [outputDimension])
+    const set = dstView.setter(name)
+
+    for (let i = 0; i < length; ++i) {
+      set(get(i), i)
+    }
+
+    const byteOffset = buffers.reduce((sum, b) => sum + b.length, 0)
+    header[name] = {
+      byteOffset,
+      componentType: getComponentType(outputDimension),
+      type: 'SCALAR',
+    }
+
+    buffers.push(buffer)
+  })
 
   const binary = Buffer.concat(buffers)
   return { header, binary }

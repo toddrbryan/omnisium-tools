@@ -8,13 +8,19 @@ import { Cache } from './cache'
 import { Pnts } from './pnts'
 import { Tileset } from './tileset'
 import { Options } from './types'
+import { Copc, Getter } from 'copc'
 
 type Translate = {
   filename: string
   options?: Partial<Options>
   cache?: Cache
 }
-
+// type TranslateCopc = {
+//   filename: string
+//   copc: Copc
+//   getter: Getter
+//   options?: Partial<Options>
+// }
 /**
  * Generates a 3D-Tiles file translation of an EPT dataset at the virtual path
  * <ept-directory>/ept-tileset/.  So the virtual "tileset.json" for an EPT

@@ -97,7 +97,7 @@ function run() {
     )
     .command(
       'serve',
-      'Serve 3D Tiles on the fly from EPT resources',
+      'Serve 3D Tiles on the fly from EPT or COPC resources',
       (yargs) =>
         yargs
           .option('roots', {
@@ -130,7 +130,7 @@ function run() {
     )
     .command(
       'tile [input]',
-      'Translate EPT to 3D Tiles at rest',
+      'Translate EPT or COPC to 3D Tiles at rest',
       (yargs) =>
         yargs
           .option('input', {

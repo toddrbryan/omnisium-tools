@@ -2,6 +2,7 @@ import { Bounds, Hierarchy, Key, Step } from 'ept'
 import { Reproject } from 'utils'
 
 import { BoundingVolume } from '3d-tiles/bounding-volume'
+import { CopcNode, CopcNodes } from './types'
 
 const steps: Step[] = [
   [0, 0, 0],
@@ -22,6 +23,13 @@ export declare namespace Tile {
     key: Key
     geometricError: number
   }
+  export type TranslateCopcOptions = {
+    bounds: Bounds
+    code: string
+    nodes: CopcNodes
+    key: Key
+    geometricError: number
+  }
   export type Content = { uri: string }
 }
 
@@ -33,7 +41,7 @@ export type Tile = {
   refine?: 'ADD' | 'REPLACE'
 }
 
-export const Tile = { translate }
+export const Tile = { translate, translateCopc }
 
 function translate({
   bounds,
@@ -66,6 +74,48 @@ function translate({
   }, [])
 
   const points = hierarchy[Key.stringify(key)]
+  const extension = points === -1 ? 'json' : 'pnts'
+
+  const tile: Tile = {
+    content: { uri: `${Key.stringify(key)}.${extension}` },
+    boundingVolume: { region },
+    geometricError,
+    children,
+  }
+  if (Key.depth(key) === 0) tile.refine = 'ADD'
+  return tile
+}
+
+function translateCopc({
+  bounds,
+  code,
+  nodes,
+  key,
+  geometricError,
+}: Tile.TranslateCopcOptions): Tile {
+  const reproject = Reproject.create(code, 'EPSG:4326')
+  const region = BoundingVolume.Region.fromWgs84(
+    Bounds.reproject(bounds, reproject)
+  )
+  const children = steps.reduce<Tile[]>((children, step) => {
+    const nextKey = Key.step(key, step)
+    const points = nodes[Key.stringify(nextKey)]
+    if (!points) return children
+    const nextBounds = Bounds.step(bounds, step)
+
+    children.push(
+      translateCopc({
+        code,
+        nodes,
+        bounds: nextBounds,
+        key: nextKey,
+        geometricError: geometricError / 2,
+      })
+    )
+    return children
+  }, [])
+
+  const points = nodes[Key.stringify(key)].pointCount
   const extension = points === -1 ? 'json' : 'pnts'
 
   const tile: Tile = {

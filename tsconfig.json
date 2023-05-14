@@ -5,9 +5,9 @@
     "rootDir": "src",
     "outDir": "lib",
 
-    "target": "es2017",
-    "module": "commonjs",
-    "lib": ["es2020"],
+    "target": "es2019",
+    "module": "CommonJS",
+    "lib": ["es2020", "dom"],
     "declaration": true,
     "declarationMap": true,
     "skipLibCheck": true,

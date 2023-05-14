@@ -22,6 +22,7 @@ export type Header = {
 export const Header = { parse }
 
 function parse(buffer: Buffer): Header {
+  console.log("Heade rbuffer len:", buffer.byteLength)
   return {
     pointOffset: buffer.readUInt32LE(pointOffsetPosition),
     dataFormatId: buffer.readUInt8(dataFormatIdPosition) & 0x3f,

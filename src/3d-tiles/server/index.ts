@@ -85,7 +85,8 @@ async function create({
   app.use(async (ctx, next) => {
     try {
       await next()
-    } catch (err) {
+    } catch (e) {
+      const err = e as HttpError
       ctx.body = { message: err.message || 'Unknown error' }
       ctx.status = err.statusCode || 500
     }
